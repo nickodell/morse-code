@@ -1,10 +1,10 @@
 import numpy
 import math
-import morse_discriminate
+import cfg
 
 # implementation of goertzel function
 def gz_dsp(matrix, freq):
-	normalized_freq = freq/morse_discriminate.SAMPLE_FREQ
+	normalized_freq = freq/cfg.SAMPLE_FREQ
 	coeff = 2 * math.cos(2 * math.pi * normalized_freq)
 	s = [0, 0, 0]
 	for sample in matrix:
