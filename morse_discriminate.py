@@ -6,7 +6,7 @@ import cProfile
 
 SAMPLE_FREQ = float(44100) #Hz
 MORSE_FREQ = 440 #Hz
-FFT_FREQ = 200 #ideal number of times the fft is done a second
+FFT_FREQ = 200 #ideal number of times the gz transform is done a second
 
 OVERLAP_FACTOR = 1.1
 
@@ -33,28 +33,27 @@ def gen_test_data():
 
 
 # TODO: Think of better name
-def determine_morseness(time_domain):
-	#ideal_samples_per_fft = SAMPLE_FREQ/float(FFT_FREQ)
-	# make sure number of samples passed to dfft is power of 2
-	#aspf = actual_samples_per_fft = int(2**round(math.log(ideal_samples_per_fft, 2)))
-	aspf = 150
+def detect_tone(signal):
+	ideal_samples_per_fft = SAMPLE_FREQ/float(FFT_FREQ)
+	samples_per_cycle = SAMPLE_FREQ/MORSE_FREQ
+	aspf = actual_samples_per_fft = int(samples_per_cycle*round(ideal_samples_per_fft/samples_per_cycle))
 	
 	result = []
-	for i in xrange(0, len(time_domain), aspf):
-		samples = time_domain[i:i+aspf*OVERLAP_FACTOR]
-		if len(samples) < aspf*OVERLAP_FACTOR: #fail if you run out of data
+	for i in xrange(0, len(signal), int(aspf/OVERLAP_FACTOR)):
+		samples = signal[i:i+aspf]
+		if len(samples) < aspf: #fail if you run out of data
 			break
 		intensity = gz_dsp(samples, MORSE_FREQ)
 		
-		result.append(intensity/(aspf**2/3))
+		result.append(intensity/(aspf**2/4))
 		
 	return result
 
 if __name__ == "__main__":
 	#gen_test_data()
 	data = gen_test_data()
-	print len(data)/SAMPLE_FREQ
-	cProfile.run('determine_morseness(data)')
-
+	#print len(data)/SAMPLE_FREQ
+	#cProfile.run('detect_tone(data)')
+	print ''.join(['#' if i > 0.5 else "_" for i in detect_tone(data)])
 
 
