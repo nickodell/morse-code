@@ -1,3 +1,5 @@
+import math
+
 MAX_FUDGE_FACTOR = 0.10 #most that the element timings can be off
 
 EDGE_VARY_PENALTY_FACTOR = 0.50
@@ -17,33 +19,72 @@ def element_resolve(coeffs, coeffs_per_second):
 		f *= step
 	coeffs_per_element_list = map(lambda wpm: int(coeffs_per_second/wpm*60.0/50.0), wpm)
 	coeffs_per_element_list = sorted(list(set(coeffs_per_element_list))) # remove duplicates
-	
-	map(lambda coeffs_per_element: element_resolve_at_wpm(coeffs, coeffs_per_second, coeffs_per_element, 1), coeffs_per_element_list)
+	results = []
+	for coeffs_per_element in coeffs_per_element_list:
+		elements = element_resolve_at_wpm(coeffs, coeffs_per_element, 1)
+		if len(elements) == 0:
+			continue
+		score = score_element_solution(coeffs, coeffs_per_second, coeffs_per_element, elements)
+		#print elements, len(elements), score
+		results.append((elements, score))
+	m = max(map(lambda x: x[1], results))
+	#print map(lambda x: x[1], results)
+	for result in results:
+		if result[1] == m:
+			print result, len(result[0])
 
 	
-def element_resolve_at_wpm(coeffs, coeffs_per_second, coeffs_per_element, accumulated_fudge):
+def element_resolve_at_wpm(coeffs, coeffs_per_element, accumulated_fudge):
+	#coeffs_per_second = int(coeffs_per_second)
+	coeffs_per_element = int(coeffs_per_element)
 	
-	current_element = sum(coeffs[0:coeffs_per_second])/coeffs_per_second
-	next_element = sum(coeffs[coeffs_per_second:2*coeffs_per_second])/coeffs_per_second
+	if len(coeffs) < 2 * coeffs_per_element:
+		#should never happen
+		#print "callee,", len(coeffs), 2 * coeffs_per_element
+		#raise ValueError()
+		return []
+	
+	# We need these initial guesses to work out whether there's a transition here.
+	current_element = average_over_range(coeffs[0:coeffs_per_element])
+	next_element = average_over_range(coeffs[coeffs_per_element:2 * coeffs_per_element])
 	
 	element_transition = select_transition_type(current_element, next_element)
 	
 	# If we are on a falling or rising edge, we move our morse code window a little bit so it stays synced up with less-than-perfect morse code.
 	if element_transition != NO_EDGE:
-		ajusted_fudge = coeffs_per_element * cap([0, 1], accumulated_fudge * MAX_FUDGE_FACTOR)
+		ajusted_fudge = int(coeffs_per_element * cap([0, 1], accumulated_fudge * MAX_FUDGE_FACTOR))
 		
 		start = coeffs_per_element - ajusted_fudge
 		end = coeffs_per_element + ajusted_fudge
 		
 		i, score = edge_optimize(coeffs[start:end], element_transition == RISING_EDGE)
-		length = start + i
+		length = cap([1, 2 * coeffs_per_element - 1], start + i)
 	else:
 		length = coeffs_per_element
 	
-	coeffs_pass_on = coeffs[length:len(coeffs)]
+	coeffs_pass_on = list(coeffs[length:])
+	elements = []
+	#print "1,", elements
 	if len(coeffs_pass_on) > coeffs_per_element * 2:
-		elements = element_resolve_at_wpm(coeffs_pass_on, coeffs_per_second, coeffs_per_element, 1 + (accumulated_fudge if element_transition == NO_EDGE else 0) )
-	return score, elements
+		#print "caller,", len(coeffs_pass_on), coeffs_per_element * 4
+		elements = element_resolve_at_wpm(coeffs_pass_on, coeffs_per_element, 1 + (accumulated_fudge if element_transition == NO_EDGE else 0))
+	
+	# It's unlikely that the element has changed when we ajusted the timings, but check anyway.
+	keyed = preprocess_element_state(average_over_range(coeffs[0:length]))
+	#print "2,", elements
+	elements.insert(0, (keyed, length))
+	
+	#print new_elements
+	return elements
+
+def score_element_solution(coeffs, coeffs_per_second, coeffs_per_element, elements):
+	index = 0
+	score = 0
+	for keyed, length in elements:
+		# Ding solution if the elements contained within are substantially different from the keyed/unkeyed state
+		score -= math.sqrt(sum(map(lambda x: (keyed - x)**2, coeffs[index:index+length])))
+		score -= abs(coeffs_per_element - length)/float(coeffs_per_element)
+	return score/float(len(elements))
 
 def select_transition_type(one, two):
 	one = preprocess_element_state(one)
@@ -57,8 +98,11 @@ def select_transition_type(one, two):
 	else:
 		raise ValueError("Unknown edge type")
 
+def average_over_range(lst):
+	return sum(lst)/float(len(lst))
+
 def preprocess_element_state(ele):
-	return bool(cap([0, 1], ele))
+	return bool(cap([0, 1], round(ele)))
 
 def cap(cap_val, num):
 	return max(min(num, cap_val[1]), cap_val[0])
@@ -70,9 +114,11 @@ def edge_optimize(coeffs, rising_edge):
 	second = lambda coeff: coeff if not rising_edge else 1 - coeff
 	
 	for i in xrange(len(coeffs)):
-		score = -abs(i - len(coeffs)/2.0)*EDGE_VARY_PENALTY_FACTOR
+		score = 0
+		score -= abs(i - len(coeffs)/2.0)*EDGE_VARY_PENALTY_FACTOR
 		score -= sum(map(first, coeffs[0:i]))
 		score -= sum(map(second, coeffs[i:len(coeffs)]))
+		scores.append(score)
 	m = max(scores)
 	for i, score in enumerate(scores):
 		if score == m:
