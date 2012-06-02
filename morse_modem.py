@@ -11,7 +11,7 @@ if __name__ == "__main__":
 	data = gen_test_data()
 	#print len(data)/SAMPLE_FREQ
 	#cProfile.run('detect_tone(data)')
-	print detect_tone(data)
-	print element_resolve(*detect_tone(data))
+	#print detect_tone(data)
+	element_resolve(*detect_tone(data))
 
 
