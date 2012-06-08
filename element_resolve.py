@@ -1,8 +1,7 @@
+"""Take coefficients from detect_tone and make on/off states out of them."""
+
 import math
-
-MAX_FUDGE_FACTOR = 0.10 #most that the element timings can be off
-
-EDGE_VARY_PENALTY_FACTOR = 0.50
+from cfg import *
 
 NO_EDGE = 1 # unrelated to hank green
 RISING_EDGE = 2
@@ -11,27 +10,25 @@ FALLING_EDGE = 3
 
 def element_resolve(coeffs, coeffs_per_second):
 	# Try everything from 0.5 WPM to 30 WPM
-	step = 1.05 #it's multiplicative
+	step = 1.05 # step is multiplicative
 	wpm = []
 	f = 0.5
 	while f < 30:
 		wpm.append(f)
 		f *= step
 	coeffs_per_element_list = map(lambda wpm: int(coeffs_per_second/wpm*60.0/50.0), wpm)
-	coeffs_per_element_list = sorted(list(set(coeffs_per_element_list))) # remove duplicates
+	coeffs_per_element_list = list(set(coeffs_per_element_list)) # remove duplicates
 	results = []
 	for coeffs_per_element in coeffs_per_element_list:
 		elements = element_resolve_at_wpm(coeffs, coeffs_per_element, 1)
 		if len(elements) == 0:
 			continue
 		score = score_element_solution(coeffs, coeffs_per_second, coeffs_per_element, elements)
-		#print elements, len(elements), score
 		results.append((elements, score))
-	m = max(map(lambda x: x[1], results))
-	#print map(lambda x: x[1], results)
-	for result in results:
-		if result[1] == m:
-			print result, len(result[0])
+	elements = map(lambda x: x[1], results)
+	index = elements.index(max(elements))
+	result = results[index]
+	print result, len(result[0])
 
 	
 def element_resolve_at_wpm(coeffs, coeffs_per_element, accumulated_fudge):
@@ -39,9 +36,6 @@ def element_resolve_at_wpm(coeffs, coeffs_per_element, accumulated_fudge):
 	coeffs_per_element = int(coeffs_per_element)
 	
 	if len(coeffs) < 2 * coeffs_per_element:
-		#should never happen
-		#print "callee,", len(coeffs), 2 * coeffs_per_element
-		#raise ValueError()
 		return []
 	
 	# We need these initial guesses to work out whether there's a transition here.
@@ -84,7 +78,7 @@ def score_element_solution(coeffs, coeffs_per_second, coeffs_per_element, elemen
 		# Ding solution if the elements contained within are substantially different from the keyed/unkeyed state
 		score -= math.sqrt(sum(map(lambda x: (keyed - x)**2, coeffs[index:index+length])))
 		score -= abs(coeffs_per_element - length)/float(coeffs_per_element)
-	return score/float(len(elements))
+	return score/len(elements)
 
 def select_transition_type(one, two):
 	one = preprocess_element_state(one)
@@ -99,16 +93,19 @@ def select_transition_type(one, two):
 		raise ValueError("Unknown edge type")
 
 def average_over_range(lst):
+	"""Average of all values in list"""
 	return sum(lst)/float(len(lst))
 
 def preprocess_element_state(ele):
 	return bool(cap([0, 1], round(ele)))
 
 def cap(cap_val, num):
+	"""Makes sure value provided is between two extremes.
+	Example usage: cap([0,10], 200) -> 10"""
 	return max(min(num, cap_val[1]), cap_val[0])
 
-#Can move the edge slightly so that the morse code stays synced up.
 def edge_optimize(coeffs, rising_edge):
+	"""Can move the edge slightly so that the morse code stays synced up."""
 	scores = []
 	first = lambda coeff: coeff if rising_edge else 1 - coeff
 	second = lambda coeff: coeff if not rising_edge else 1 - coeff
