@@ -3,7 +3,7 @@ from cfg import *
 
 
 def detect_tone(signal):
-	ideal_samples_per_transform = SAMPLE_FREQ/float(transform_FREQ)
+	ideal_samples_per_transform = SAMPLE_FREQ/float(TRANSFORM_FREQ)
 	samples_per_cycle = SAMPLE_FREQ/MORSE_FREQ
 	aspt = actual_samples_per_transform = int(samples_per_cycle*max(round(ideal_samples_per_transform/samples_per_cycle), 1))
 	
