@@ -15,3 +15,4 @@ Issues:
 
  * It currently doesn't run in real time
  * No way to take input from microphone
+ * Changing values in cfg.py is not thread-safe
