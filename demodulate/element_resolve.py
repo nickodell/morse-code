@@ -46,6 +46,7 @@ def element_resolve_at_wpm(coeffs, coeffs_per_element, accumulated_fudge):
 	
 	# If we are on a falling or rising edge, we move our morse code window a little bit so it stays synced up with less-than-perfect morse code.
 	if element_transition != NO_EDGE:
+		# If we've not seen a transition in a long time, be more forgiving
 		ajusted_fudge = int(coeffs_per_element * cap([0, 1], accumulated_fudge * MAX_FUDGE_FACTOR))
 		
 		start = coeffs_per_element - ajusted_fudge

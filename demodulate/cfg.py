@@ -8,7 +8,9 @@ OVERLAP_FACTOR = 1.1 # amount that the spectral transforms overlap
 
 ### element_resolve.py
 
-MAX_FUDGE_FACTOR = 0.10 #most that the element timings can be off
+# most that the element timings can be off
+# Setting this to more than 1/7 will not do what you expect
+MAX_FUDGE_FACTOR = 0.10
 
 EDGE_VARY_PENALTY_FACTOR = 0.50
 
