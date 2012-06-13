@@ -18,6 +18,9 @@ class Sample_Storage_Window():
 		return sample[0] #unwrap list that was returned
 	def get_samples(self, num):
 		"""Attempt to get num samples from provided Sample_Storage instance"""
+		# Fail silently if something asks for no samples
+		if num <= 0:
+			return []
 		if self.current + num > self.stor.samples:
 			raise IndexError()
 		else:
