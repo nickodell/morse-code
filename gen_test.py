@@ -1,7 +1,7 @@
 import math
 import numpy
 import random
-from cfg import *
+from demodulate.cfg import *
 
 def gen_test_data():
 	pattern = [1,0,1,1,1,0,0,0,0,0,0,0] # morse code 'A'

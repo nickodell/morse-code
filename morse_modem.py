@@ -1,8 +1,8 @@
 import cProfile
-from cfg import *
-from detect_tone import *
+from demodulate.cfg import *
+from demodulate.detect_tone import *
+from demodulate.element_resolve import *
 from gen_test import *
-from element_resolve import *
 
 
 
