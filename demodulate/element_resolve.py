@@ -10,10 +10,10 @@ FALLING_EDGE = 3
 
 def element_resolve(coeffs, coeffs_per_second):
 	# Try everything from 0.5 WPM to 30 WPM
-	step = 1.05 # step is multiplicative
+	step = WPM_STEP # step is multiplicative
 	wpm = []
-	f = 0.5
-	while f < 30:
+	f = WPM_START
+	while f < WPM_END:
 		wpm.append(f)
 		f *= step
 	coeffs_per_element_list = map(lambda wpm: int(coeffs_per_second/wpm*60.0/50.0), wpm)

@@ -11,3 +11,7 @@ OVERLAP_FACTOR = 1.1 # amount that the spectral transforms overlap
 MAX_FUDGE_FACTOR = 0.10 #most that the element timings can be off
 
 EDGE_VARY_PENALTY_FACTOR = 0.50
+
+WPM_START = 0.5
+WPM_END = 30
+WPM_STEP = 1.05 # step is multiplicative
