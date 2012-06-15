@@ -20,7 +20,7 @@ def element_resolve(coeffs, coeffs_per_second):
 	coeffs_per_element_list = list(set(coeffs_per_element_list)) # remove duplicates
 	results = []
 	for coeffs_per_element in coeffs_per_element_list:
-		elements = element_resolve_at_wpm(coeffs, coeffs_per_element, 1)
+		elements = element_resolve_at_wpm(coeffs, coeffs_per_element)
 		if len(elements) == 0:
 			continue
 		score = score_element_solution(coeffs, coeffs_per_second, coeffs_per_element, elements)
@@ -31,55 +31,57 @@ def element_resolve(coeffs, coeffs_per_second):
 	print result, len(result[0])
 
 	
-def element_resolve_at_wpm(coeffs, coeffs_per_element, accumulated_fudge):
-	#coeffs_per_second = int(coeffs_per_second)
+def element_resolve_at_wpm(coeffs, coeffs_per_element, rescore_callback):
 	coeffs_per_element = int(coeffs_per_element)
-	
-	if len(coeffs) < 2 * coeffs_per_element:
-		return []
-	
-	# We need these initial guesses to work out whether there's a transition here.
-	current_element = average_over_range(coeffs[0:coeffs_per_element])
-	next_element = average_over_range(coeffs[coeffs_per_element:2 * coeffs_per_element])
-	
-	element_transition = select_transition_type(current_element, next_element)
-	
-	# If we are on a falling or rising edge, we move our morse code window a little bit so it stays synced up with less-than-perfect morse code.
-	if element_transition != NO_EDGE:
-		# If we've not seen a transition in a long time, be more forgiving
-		ajusted_fudge = int(coeffs_per_element * cap([0, 1], accumulated_fudge * MAX_FUDGE_FACTOR))
+	buff = []
+	accumulated_fudge = 1
+	while True:
+		try:
+			buff = buff + coeffs.get_samples((coeffs_per_element * 2) - len(buff))
+		except IndexError:
+			yield "No data remaining"
 		
-		start = coeffs_per_element - ajusted_fudge
-		end = coeffs_per_element + ajusted_fudge
-		
-		i, score = edge_optimize(coeffs[start:end], element_transition == RISING_EDGE)
-		length = cap([1, 2 * coeffs_per_element - 1], start + i)
-	else:
-		length = coeffs_per_element
+		# We need these initial guesses to work out whether there's a transition here.
+		current_element = average_over_range(coeffs[0:coeffs_per_element])
+		next_element = average_over_range(coeffs[coeffs_per_element:2 * coeffs_per_element])
 	
-	coeffs_pass_on = list(coeffs[length:])
-	elements = []
-	#print "1,", elements
-	if len(coeffs_pass_on) > coeffs_per_element * 2:
+		element_transition = select_transition_type(current_element, next_element)
+	
+		# If we are on a falling or rising edge, we move our morse code window a little bit so it stays synced up with less-than-perfect morse code.
+		if element_transition != NO_EDGE:
+			# If we've not seen a transition in a long time, be more forgiving
+			ajusted_fudge = int(coeffs_per_element * cap([0, 1], accumulated_fudge * MAX_FUDGE_FACTOR))
+		
+			start = coeffs_per_element - ajusted_fudge
+			end = coeffs_per_element + ajusted_fudge
+		
+			i = edge_optimize(coeffs[start:end], element_transition == RISING_EDGE)
+			length = cap([1, 2 * coeffs_per_element - 1], start + i)
+		else:
+			length = coeffs_per_element
+	
+		
+		#print "1,", elements
+		
 		#print "caller,", len(coeffs_pass_on), coeffs_per_element * 4
-		elements = element_resolve_at_wpm(coeffs_pass_on, coeffs_per_element, 1 + (accumulated_fudge if element_transition == NO_EDGE else 0))
+		
+		if element_transition == NO_EDGE:
+			accumulated_fudge += 1
+		else:
+			accumulated_fudge = 1
 	
-	# It's unlikely that the element has changed when we ajusted the timings, but check anyway.
-	keyed = preprocess_element_state(average_over_range(coeffs[0:length]))
-	#print "2,", elements
-	elements.insert(0, (keyed, length))
-	
-	#print new_elements
-	return elements
+		# It's unlikely that the element has changed since when we ajusted the timings, but check anyway.
+		keyed = preprocess_element_state(average_over_range(coeffs[0:length]))
+		rescore_callback(score_element_solution(buff, coeffs_per_second, coeffs_per_element, keyed, length))
+		buff = buff[length:]
+		yield keyed
 
-def score_element_solution(coeffs, coeffs_per_second, coeffs_per_element, elements):
-	index = 0
+def score_element_solution(buff, coeffs_per_second, coeffs_per_element, keyed, length):
 	score = 0
-	for keyed, length in elements:
-		# Ding solution if the elements contained within are substantially different from the keyed/unkeyed state
-		score -= math.sqrt(sum(map(lambda x: (keyed - x)**2, coeffs[index:index+length])))
-		score -= abs(coeffs_per_element - length)/float(coeffs_per_element)
-	return score/len(elements)
+	# Ding solution if the elements contained within are substantially different from the keyed/unkeyed state
+	score -= math.sqrt(sum(map(lambda x: (keyed - x)**2, coeffs[0:length])))
+	score -= abs(coeffs_per_element - length)/float(coeffs_per_element)
+	return score
 
 def select_transition_type(one, two):
 	one = preprocess_element_state(one)
@@ -120,6 +122,6 @@ def edge_optimize(coeffs, rising_edge):
 	m = max(scores)
 	for i, score in enumerate(scores):
 		if score == m:
-			return i, score
+			return i
 
 
