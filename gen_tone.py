@@ -17,6 +17,7 @@ def gen_tone(pattern, WPM):
 		data[i] = 0 if not keyed else (radians_per_sample * i)
 	
 	data = numpy.sin(data)
-	
+	data *= 2**16-1
+	data = numpy.array(data, dtype=numpy.int16)
 	
 	return data
