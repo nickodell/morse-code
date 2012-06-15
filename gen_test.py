@@ -1,13 +1,10 @@
 import math
 import numpy
-import random
 from demodulate.cfg import *
 
-def gen_test_data():
-	pattern = [1,0,1,1,1,0,0,0,0,0,0,0] # morse code 'A'
+def gen_tone(pattern, WPM):
 	cycles_per_sample = MORSE_FREQ/SAMPLE_FREQ
 	radians_per_sample = cycles_per_sample * 2 * math.pi
-	WPM = random.uniform(2,20)
 	elements_per_second = WPM * 50.0 / 60.0
 	samples_per_element = int(SAMPLE_FREQ/elements_per_second)
 	
