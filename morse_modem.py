@@ -11,7 +11,7 @@ if __name__ == "__main__":
 	WPM = random.uniform(2,20)
 	pattern = [1,0,1,1,1,0,0,0,0,0,0,0] # morse code 'A'
 	#gen_test_data()
-	data = gen_tone(pattern)
+	data = gen_tone(pattern, WPM)
 	#print len(data)/SAMPLE_FREQ
 	#cProfile.run('detect_tone(data)')
 	#print detect_tone(data)
