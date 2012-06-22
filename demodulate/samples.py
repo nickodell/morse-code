@@ -3,7 +3,9 @@
 
 
 class Sample_Storage():
-	def append_samples(l):
+	def __init__(self, l):
+		self.samples = list(l)
+	def append_samples(self, l):
 		self.samples.extend(l)
 	
 class Sample_Storage_Window():
@@ -21,7 +23,7 @@ class Sample_Storage_Window():
 		# Fail silently if something asks for no samples
 		if num <= 0:
 			return []
-		if self.current + num > self.stor.samples:
+		if self.current + num > len(self.stor.samples):
 			raise IndexError()
 		else:
 			start = self.current

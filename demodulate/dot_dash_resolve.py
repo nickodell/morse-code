@@ -21,7 +21,7 @@ def dot_dash_resolve(elements, rescore_callback):
 	recent = []
 	
 	for element in elements:
-		if element == "No data remaining":
+		if element == NOT_ENOUGH_DATA:
 			yield element
 		if recent[0] == element:
 			# Hasn't changed state.

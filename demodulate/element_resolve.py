@@ -8,38 +8,16 @@ RISING_EDGE = 2
 FALLING_EDGE = 3
 
 
-def element_resolve(coeffs, coeffs_per_second):
-	# Try everything from 0.5 WPM to 30 WPM
-	step = WPM_STEP # step is multiplicative
-	wpm = []
-	f = WPM_START
-	while f < WPM_END:
-		wpm.append(f)
-		f *= step
-	coeffs_per_element_list = map(lambda wpm: int(coeffs_per_second/wpm*60.0/50.0), wpm)
-	coeffs_per_element_list = list(set(coeffs_per_element_list)) # remove duplicates
-	results = []
-	for coeffs_per_element in coeffs_per_element_list:
-		elements = element_resolve_at_wpm(coeffs, coeffs_per_element)
-		if len(elements) == 0:
-			continue
-		score = score_element_solution(coeffs, coeffs_per_second, coeffs_per_element, elements)
-		results.append((elements, score))
-	elements = map(lambda x: x[1], results)
-	index = elements.index(max(elements))
-	result = results[index]
-	print result, len(result[0])
 
-	
 def element_resolve_at_wpm(coeffs, coeffs_per_element, rescore_callback):
 	coeffs_per_element = int(coeffs_per_element)
 	buff = []
 	accumulated_fudge = 1
 	while True:
 		try:
-			buff = buff + coeffs.get_samples((coeffs_per_element * 2) - len(buff))
+			buff.extend(coeffs.get_samples((coeffs_per_element * 2) - len(buff))
 		except IndexError:
-			yield "No data remaining"
+			yield NOT_ENOUGH_DATA
 		
 		# We need these initial guesses to work out whether there's a transition here.
 		current_element = average_over_range(coeffs[0:coeffs_per_element])
@@ -59,17 +37,16 @@ def element_resolve_at_wpm(coeffs, coeffs_per_element, rescore_callback):
 			length = cap([1, 2 * coeffs_per_element - 1], start + i)
 		else:
 			length = coeffs_per_element
-	
+		
 		
 		#print "1,", elements
 		
 		#print "caller,", len(coeffs_pass_on), coeffs_per_element * 4
 		
-		if element_transition == NO_EDGE:
-			accumulated_fudge += 1
-		else:
-			accumulated_fudge = 1
-	
+		if element_transition != NO_EDGE:
+			accumulated_fudge = 0
+		accumulated_fudge += 1
+		
 		# It's unlikely that the element has changed since when we ajusted the timings, but check anyway.
 		keyed = preprocess_element_state(average_over_range(coeffs[0:length]))
 		rescore_callback(score_element_solution(buff, coeffs_per_second, coeffs_per_element, keyed, length))
